@@ -20,8 +20,11 @@ class ModelExporter():
     def export_model(self, output_dir, model_name):
         path = os.path.join(output_dir,"model.json")
         model = self.client2.get(f"registered-models/get?name={model_name}")
-        for v in model["registered_model"]["latest_versions"]:
-            run_id = v["run_id"] 
+        model_versions = self.client2.get(f"model-versions/search?filter=name=%27{model_name}%27")
+        model["registered_model"]["all_versions"] = model_versions["model_versions"]
+        del model["registered_model"]["latest_versions"]
+        for v in model["registered_model"]["all_versions"]:
+            run_id = v["run_id"]
             opath = os.path.join(output_dir,run_id)
             self.run_exporter.export_run(run_id, opath)
             opath = opath.replace("dbfs:","/dbfs")

@@ -25,7 +25,7 @@ class ModelImporter():
         print(f"  Name: {dct['name']}")
         print(f"  Description: {dct.get('description','')}")
         print(f"  Tags: {dct.get('tags','')}")
-        print(f"  {len(dct['latest_versions'])} latest versions")
+        print(f"  Total {len(dct['all_versions'])} versions")
 
         if delete_model:
             model_utils.delete_model(self.client, model_name)
@@ -34,8 +34,9 @@ class ModelImporter():
         self.client.create_registered_model(model_name, tags, dct.get("description"))
         mlflow.set_experiment(experiment_name)
 
-        print("Importing latest versions:")
-        for v in dct["latest_versions"]:
+        print("Importing all versions ...")
+        model_versions_sorted = sorted(dct["all_versions"], key = lambda v:v["version"])
+        for v in model_versions_sorted:
             run_id = v["run_id"]
             source = v["source"]
             current_stage = v["current_stage"]
@@ -58,7 +59,9 @@ class ModelImporter():
             print("      source:      ", source)
             version = self.client.create_model_version(model_name, source, run_id)
             model_utils.wait_until_version_is_ready(self.client, model_name, version, sleep_time=2)
-            self.client.transition_model_version_stage(model_name, version.version, current_stage)
+            if current_stage != "None":
+                self.client.transition_model_version_stage(model_name, version.version, current_stage)
+            assert v["version"] == version.version
 
 
 @click.command()
