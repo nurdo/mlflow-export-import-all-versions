@@ -17,19 +17,29 @@ class ModelExporter():
         self.client2 = HttpClient("api/2.0/preview/mlflow")
         self.run_exporter = RunExporter(self.client, export_metadata_tags=export_metadata_tags, notebook_formats=notebook_formats, filesystem=filesystem)
 
+    def _object_to_dict(self, model_versions):
+        model_versions_dict = []
+        for v in model_versions:
+            dict1 = vars(v)
+            dict2 = {}
+            for k in dict1:
+                dict2[k.strip('_')] = dict1[k]
+            model_versions_dict.append(dict2)
+        return model_versions_dict
+
     def export_model(self, output_dir, model_name):
         path = os.path.join(output_dir,"model.json")
         model = self.client2.get(f"registered-models/get?name={model_name}")
-        model_versions = self.client2.get(f"model-versions/search?filter=name=%27{model_name}%27")
-        model["registered_model"]["all_versions"] = model_versions["model_versions"]
-        del model["registered_model"]["latest_versions"]
-        for v in model["registered_model"]["all_versions"]:
-            run_id = v["run_id"]
+        model_versions = self.client.search_model_versions(f"name='{model_name}'")
+        for v in model_versions:
+            run_id = v.run_id
             opath = os.path.join(output_dir,run_id)
             self.run_exporter.export_run(run_id, opath)
             opath = opath.replace("dbfs:","/dbfs")
             run = self.client.get_run(run_id)
-            v["artifact_uri"] = run.info.artifact_uri
+            setattr(v, "artifact_uri", run.info.artifact_uri)
+        del model["registered_model"]["latest_versions"]
+        model["registered_model"]["all_versions"] = self._object_to_dict(model_versions)
         utils.write_json_file(self.fs, path, model)
 
 @click.command()
