@@ -2,6 +2,10 @@
 
 Tools to export and import MLflow runs, experiments or registered models from one tracking server to another.
 
+_The difference between this fork and the upstream is in exporting and importing a registered model: 
+the upstream only exports and imports the latest versions for each stage of a registered model, 
+while this fork exports and imports all versions of a registered model._
+
 ## Architecture
 
 <img src="export_import_architecture.png" height="220" >
